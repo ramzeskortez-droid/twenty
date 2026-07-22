@@ -23,6 +23,27 @@ const hasInvalidRecipient = (recipients: EmailRecipient[]): boolean =>
     (recipient) => !isValidEmailRecipientAddress(recipient.address),
   );
 
+// 2code: подпись в письмах. Хранится локально (на пользователя/браузер),
+// редактируется в Настройки → Электронные письма. Подставляется в тело нового письма.
+export const EMAIL_SIGNATURE_STORAGE_KEY = '2code-email-signature';
+
+export const getEmailSignatureHtml = (): string => {
+  try {
+    const raw = window.localStorage.getItem(EMAIL_SIGNATURE_STORAGE_KEY) ?? '';
+    if (raw.trim() === '') {
+      return '';
+    }
+    const escaped = raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br />');
+    return `<br /><br />${escaped}`;
+  } catch {
+    return '';
+  }
+};
+
 export const useEmailComposerState = ({
   connectedAccountId: initialConnectedAccountId,
   draftPrefill,
@@ -35,7 +56,8 @@ export const useEmailComposerState = ({
   const initialCc = draftPrefill?.cc ?? '';
   const initialBcc = draftPrefill?.bcc ?? '';
   const initialSubject = draftPrefill?.subject ?? defaultSubject;
-  const initialBody = draftPrefill?.body ?? '';
+  // Для нового письма (без черновика) подставляем подпись 2code.
+  const initialBody = draftPrefill?.body ?? getEmailSignatureHtml();
 
   const [connectedAccountId, setConnectedAccountId] = useState(
     initialConnectedAccountId,
