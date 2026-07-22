@@ -4,10 +4,12 @@ import {
   CalendarChannelSyncStage,
   ConnectedAccountProvider,
   MessageChannelSyncStage,
+  MessageChannelSyncStatus,
   SettingsPath,
 } from 'twenty-shared/types';
 
 import { useTriggerProviderReconnect } from '@/settings/accounts/hooks/useTriggerProviderReconnect';
+import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
@@ -51,6 +53,34 @@ export const SettingsAccountsRowDropdownMenu = ({
     DELETE_CONNECTED_ACCOUNT,
   );
   const { triggerProviderReconnect } = useTriggerProviderReconnect();
+  const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
+
+  // 2code: «Проверить связь» — показывает текущий статус синхронизации почты и обновляет данные.
+  const checkConnection = async () => {
+    const statuses = account.messageChannels.map(
+      (channel) => channel.syncStatus,
+    );
+    await apolloClient.refetchQueries({ include: 'active' });
+
+    const hasFailure = statuses.some(
+      (s) =>
+        s === MessageChannelSyncStatus.FAILED_UNKNOWN ||
+        s === MessageChannelSyncStatus.FAILED_INSUFFICIENT_PERMISSIONS,
+    );
+    if (hasFailure) {
+      enqueueErrorSnackBar({
+        message: t`Ошибка связи с почтой. Проверьте настройки подключения.`,
+      });
+    } else if (statuses.includes(MessageChannelSyncStatus.ACTIVE)) {
+      enqueueSuccessSnackBar({
+        message: t`Связь в порядке — синхронизация активна.`,
+      });
+    } else if (statuses.includes(MessageChannelSyncStatus.ONGOING)) {
+      enqueueSuccessSnackBar({ message: t`Идёт синхронизация…` });
+    } else {
+      enqueueSuccessSnackBar({ message: t`Почта ещё не синхронизирована.` });
+    }
+  };
 
   const hasPendingConfiguration =
     account.messageChannels.some(
@@ -110,6 +140,14 @@ export const SettingsAccountsRowDropdownMenu = ({
                 text={t`Emails settings`}
                 onClick={() => {
                   navigate(SettingsPath.AccountsEmails);
+                  closeDropdown(dropdownId);
+                }}
+              />
+              <MenuItem
+                LeftIcon={IconRefresh}
+                text={t`Проверить связь`}
+                onClick={() => {
+                  checkConnection();
                   closeDropdown(dropdownId);
                 }}
               />
