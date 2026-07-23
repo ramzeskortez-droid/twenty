@@ -10,6 +10,7 @@ import { recordGroupDefinitionsComponentSelector } from '@/object-record/record-
 import { computeRecordGroupOptionsFilter } from '@/object-record/record-group/utils/computeRecordGroupOptionsFilter';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { recordIndexGroupFieldMetadataItemComponentState } from '@/object-record/record-index/states/recordIndexGroupFieldMetadataComponentState';
+import { selected2codeFunnelIdState } from '@/object-record/record-index/states/selected2codeFunnelIdState';
 import { currentRecordSortsComponentState } from '@/object-record/record-sort/states/currentRecordSortsComponentState';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
@@ -91,11 +92,21 @@ export const useRecordIndexGroupCommonQueryVariables = () => {
     recordGroupValues,
   });
 
-  const combinedFilters = combineFilters([
-    anyFieldFilter,
-    requestFilters,
-    recordGroupOptionsFilter,
-  ]);
+  // 2code: фильтр по выбранной воронке (только для Сделок)
+  const selected2codeFunnelId = useAtomStateValue(selected2codeFunnelIdState);
+  const funnelFilter =
+    objectMetadataItem.nameSingular === 'opportunity' && selected2codeFunnelId
+      ? { funnelId: { eq: selected2codeFunnelId } }
+      : undefined;
+
+  const combinedFilters = combineFilters(
+    [
+      anyFieldFilter,
+      requestFilters,
+      recordGroupOptionsFilter,
+      funnelFilter,
+    ].filter((f): f is NonNullable<typeof f> => f !== undefined),
+  );
 
   const recordGroupsLimit = visibleRecordGroupDefinitions.length;
 
