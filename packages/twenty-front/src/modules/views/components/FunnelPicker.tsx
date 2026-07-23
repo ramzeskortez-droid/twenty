@@ -1,5 +1,6 @@
 import { styled } from '@linaria/react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { IconChevronDown, IconFilter, IconPlus } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
@@ -152,28 +153,30 @@ export const FunnelPicker = () => {
         {currentFunnel?.name ?? 'Воронка'}
         <IconChevronDown size={12} />
       </StyledButton>
-      {open && (
-        <>
-          <StyledBackdrop onClick={() => setOpen(false)} />
-          <StyledMenu style={{ top: menuPos.top, left: menuPos.left }}>
-            {funnels.map((f) => (
-              <StyledItem
-                key={f.id}
-                active={f.id === selectedFunnelId}
-                onClick={() => selectFunnel(f.id)}
-              >
-                <IconFilter size={14} />
-                {f.name}
+      {open &&
+        createPortal(
+          <>
+            <StyledBackdrop onClick={() => setOpen(false)} />
+            <StyledMenu style={{ top: menuPos.top, left: menuPos.left }}>
+              {funnels.map((f) => (
+                <StyledItem
+                  key={f.id}
+                  active={f.id === selectedFunnelId}
+                  onClick={() => selectFunnel(f.id)}
+                >
+                  <IconFilter size={14} />
+                  {f.name}
+                </StyledItem>
+              ))}
+              <StyledDivider />
+              <StyledItem onClick={handleCreate}>
+                <IconPlus size={14} />
+                Создать воронку
               </StyledItem>
-            ))}
-            <StyledDivider />
-            <StyledItem onClick={handleCreate}>
-              <IconPlus size={14} />
-              Создать воронку
-            </StyledItem>
-          </StyledMenu>
-        </>
-      )}
+            </StyledMenu>
+          </>,
+          document.body,
+        )}
     </StyledContainer>
   );
 };
