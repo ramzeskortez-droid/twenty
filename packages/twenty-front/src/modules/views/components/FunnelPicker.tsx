@@ -1,5 +1,5 @@
 import { styled } from '@linaria/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IconChevronDown, IconFilter, IconPlus } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
@@ -33,17 +33,22 @@ const StyledButton = styled.button`
   padding: 0 ${themeCssVariables.spacing[2]};
 `;
 
+// position: fixed + координаты кнопки — иначе дропдаун обрезается overflow хедера (TopBar)
 const StyledMenu = styled.div`
   background: ${themeCssVariables.background.primary};
   border: 1px solid ${themeCssVariables.border.color.medium};
   border-radius: ${themeCssVariables.border.radius.md};
   box-shadow: ${themeCssVariables.boxShadow.strong};
-  left: 0;
-  min-width: 200px;
+  min-width: 220px;
   padding: ${themeCssVariables.spacing[1]};
-  position: absolute;
-  top: 130%;
-  z-index: 100;
+  position: fixed;
+  z-index: 2000;
+`;
+
+const StyledBackdrop = styled.div`
+  inset: 0;
+  position: fixed;
+  z-index: 1999;
 `;
 
 const StyledItem = styled.div<{ active?: boolean }>`
@@ -71,6 +76,16 @@ type FunnelRecord = { id: string; name: string; position?: number };
 export const FunnelPicker = () => {
   const { objectNameSingular } = useRecordIndexContextOrThrow();
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  const toggleOpen = () => {
+    if (!open && buttonRef.current) {
+      const r = buttonRef.current.getBoundingClientRect();
+      setMenuPos({ top: r.bottom + 4, left: r.left });
+    }
+    setOpen((v) => !v);
+  };
 
   const selectedFunnelId = useAtomStateValue(selected2codeFunnelIdState);
   const setSelectedFunnelId = useSetAtomState(selected2codeFunnelIdState);
@@ -132,29 +147,32 @@ export const FunnelPicker = () => {
 
   return (
     <StyledContainer>
-      <StyledButton onClick={() => setOpen((v) => !v)}>
+      <StyledButton ref={buttonRef} onClick={toggleOpen}>
         <IconFilter size={14} />
         {currentFunnel?.name ?? 'Воронка'}
         <IconChevronDown size={12} />
       </StyledButton>
       {open && (
-        <StyledMenu>
-          {funnels.map((f) => (
-            <StyledItem
-              key={f.id}
-              active={f.id === selectedFunnelId}
-              onClick={() => selectFunnel(f.id)}
-            >
-              <IconFilter size={14} />
-              {f.name}
+        <>
+          <StyledBackdrop onClick={() => setOpen(false)} />
+          <StyledMenu style={{ top: menuPos.top, left: menuPos.left }}>
+            {funnels.map((f) => (
+              <StyledItem
+                key={f.id}
+                active={f.id === selectedFunnelId}
+                onClick={() => selectFunnel(f.id)}
+              >
+                <IconFilter size={14} />
+                {f.name}
+              </StyledItem>
+            ))}
+            <StyledDivider />
+            <StyledItem onClick={handleCreate}>
+              <IconPlus size={14} />
+              Создать воронку
             </StyledItem>
-          ))}
-          <StyledDivider />
-          <StyledItem onClick={handleCreate}>
-            <IconPlus size={14} />
-            Создать воронку
-          </StyledItem>
-        </StyledMenu>
+          </StyledMenu>
+        </>
       )}
     </StyledContainer>
   );
